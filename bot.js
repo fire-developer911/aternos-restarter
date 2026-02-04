@@ -1,5 +1,5 @@
-
-
+const express = require("express");
+const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
@@ -13,7 +13,6 @@ app.listen(PORT, () => {
 const puppeteer = require('puppeteer');
 require('dotenv').config(); // loads .env into process.env
 
-
 const EMAIL = process.env.ATERNOS_EMAIL;
 const PASSWORD = process.env.ATERNOS_PASS;
 const SERVER_ID = 'bhRApseisxbc98cx';
@@ -21,8 +20,22 @@ const SERVER_ID = 'bhRApseisxbc98cx';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: false });
+  const browser = await puppeteer.launch({
+    headless: true, // must be true in cloud
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process',
+      '--disable-gpu'
+    ],
+  });
+
   const page = await browser.newPage();
+  await page.setViewport({ width: 1280, height: 800 });
 
   // SAFE CLICK FUNCTION
   async function safeClick(selector) {
@@ -77,7 +90,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       try {
         await safeClick('#restart');
         console.log('Restart found → clicked');
-		console.log('waiting 1 hour')
+        console.log('waiting 1 hour');
         clicked = true;
         failedAttempts = 0;
         await sleep(3600000);
@@ -93,7 +106,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
         try {
           await safeClick('#start');
           console.log('Start found → clicked');
-		  console.log('waiting 1 hour')
+          console.log('waiting 1 hour');
           clicked = true;
           failedAttempts = 0;
           await sleep(3600000);
