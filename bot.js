@@ -1,3 +1,15 @@
+
+
+const PORT = process.env.PORT || 3000;
+
+app.get("/", (req, res) => {
+  res.send("Bot is alive. Regrettably.");
+});
+
+app.listen(PORT, () => {
+  console.log(`Web server running on port ${PORT}`);
+});
+
 const puppeteer = require('puppeteer');
 require('dotenv').config(); // loads .env into process.env
 
