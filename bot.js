@@ -22,7 +22,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   const browser = await puppeteer.launch({
     headless: true, // must be true in cloud
-    executablePath: '/opt/render/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux64/chrome',
+    executablePath: './.local-chrome/chrome/linux-127.0.6533.88/chrome-linux64/chrome',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
