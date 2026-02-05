@@ -25,6 +25,7 @@ app.listen(PORT, () => {
 (async () => {
   const browser = await puppeteerExtra.launch({
     headless: true,
+    executablePath: '/opt/render/project/src/.local-chrome/chrome/linux-127.0.6533.88/chrome-linux64/chrome',
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
