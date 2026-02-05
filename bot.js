@@ -11,7 +11,7 @@ app.listen(PORT, () => {
 });
 
 const puppeteer = require('puppeteer');
-require('dotenv').config(); // loads .env into process.env
+require('dotenv').config();
 
 const EMAIL = process.env.ATERNOS_EMAIL;
 const PASSWORD = process.env.ATERNOS_PASS;
@@ -21,15 +21,12 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 (async () => {
   const browser = await puppeteer.launch({
-    headless: true, // must be true in cloud
+    headless: true,
     executablePath: '/opt/render/project/src/.local-chrome/chrome/linux-127.0.6533.88/chrome-linux64/chrome',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
       '--single-process',
       '--disable-gpu'
     ],
@@ -38,17 +35,35 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 800 });
 
-  // SAFE CLICK FUNCTION
+  // LOGIN PAGE
+  await page.goto('https://aternos.org/go/', { waitUntil: 'domcontentloaded' });
+
+  // DEBUG SCREENSHOT
+  await page.screenshot({ path: 'debug.png' });
+  console.log("Saved debug.png");
+  console.log("Title:", await page.title());
+
+  // ANTI-BOT DETECTION
+  const html = await page.content();
+  if (
+    html.includes('cloudflare') ||
+    html.includes('captcha') ||
+    html.includes('Just a moment')
+  ) {
+    console.log("Blocked by anti-bot. Check debug.png.");
+    process.exit(1);
+  }
+
+  // SAFE CLICK
   async function safeClick(selector) {
-    await page.waitForSelector(selector, { visible: true });
+    await page.waitForSelector(selector, { visible: true, timeout: 60000 });
     const el = await page.$(selector);
-    await el.evaluate(e => e.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await el.evaluate(e => e.scrollIntoView({ block: 'center' }));
     await el.click({ delay: 50 });
   }
 
   // LOGIN
-  await page.goto('https://aternos.org/go/', { waitUntil: 'networkidle2' });
-  await page.waitForSelector('.username');
+  await page.waitForSelector('.username', { visible: true, timeout: 60000 });
   await page.type('.username', EMAIL);
   await page.waitForSelector('.password');
   await page.type('.password', PASSWORD);
@@ -56,18 +71,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.waitForNavigation({ waitUntil: 'networkidle2' });
   console.log('Logged in');
 
-  // GOOGLE VIGNETTE KILLER
-  setInterval(async () => {
-    const url = page.url();
-    if (url.includes('#google_vignette')) {
-      const clean = url.replace('#google_vignette', '');
-      console.log('Vignette detected → cleaning');
-      await page.goto(clean, { waitUntil: 'networkidle2' });
-      await sleep(2000);
-    }
-  }, 1000);
-
-  // OPEN SERVER FUNCTION
+  // OPEN SERVER
   async function openServer() {
     console.log('Trying to open server...');
     await safeClick(`a.servercard[data-id="${SERVER_ID}"]`);
@@ -76,7 +80,6 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     console.log('Opened server');
   }
 
-  // open server for first time
   await openServer();
 
   // MAIN LOOP
@@ -85,45 +88,34 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   while (true) {
     let clicked = false;
 
-    // Try restart first
     const restartBtn = await page.$('#restart');
     if (restartBtn) {
       try {
         await safeClick('#restart');
-        console.log('Restart found → clicked');
-        console.log('waiting 1 hour');
+        console.log('Restart clicked, waiting 1h');
         clicked = true;
         failedAttempts = 0;
         await sleep(3600000);
-      } catch {
-        console.log('Restart click failed → trying start button');
-      }
+      } catch {}
     }
 
-    // If restart wasn't clicked, try start
     if (!clicked) {
       const startBtn = await page.$('#start');
       if (startBtn) {
         try {
           await safeClick('#start');
-          console.log('Start found → clicked');
-          console.log('waiting 1 hour');
+          console.log('Start clicked, waiting 1h');
           clicked = true;
           failedAttempts = 0;
           await sleep(3600000);
-        } catch {
-          console.log('Start click failed → will retry next loop');
-        }
+        } catch {}
       }
     }
 
-    // If neither worked, increment failedAttempts
     if (!clicked) {
       failedAttempts++;
-      console.log('No button yet → waiting', failedAttempts, 'time(s)');
-
+      console.log('No button, attempt', failedAttempts);
       if (failedAttempts >= 2) {
-        console.log('Failed twice → reopening server card');
         await openServer();
         failedAttempts = 0;
       } else {
